@@ -1,0 +1,7 @@
+{
+  "name": "Culinary Companion",
+  "description": "An AI-powered recipe suggestion app. Input your available ingredients via text or a photo of your fridge, and get budget-friendly meal ideas and a shopping list for what you're missing.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
