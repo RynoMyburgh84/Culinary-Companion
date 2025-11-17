@@ -132,24 +132,28 @@ const generateRecipes = async (prompt: string, imagePart?: any): Promise<ApiResp
     }
 };
 
-export const generateRecipesFromText = (ingredients: string, measurementSystem: 'imperial' | 'metric'): Promise<ApiResponse> => {
+export const generateRecipesFromText = (ingredients: string, measurementSystem: 'imperial' | 'metric', dislikes: string): Promise<ApiResponse> => {
     const measurementInstruction = `All ingredient quantities in recipes and the shopping list must be in the ${measurementSystem} system.`;
-    const prompt = `You are a helpful culinary assistant specializing in budget-friendly meals. Based on the following ingredients: ${ingredients}, suggest 3-5 delicious, easy-to-make, and low-cost recipes for lunch or dinner. For each recipe, list the ingredients I have, the ingredients I need to buy, and the step-by-step instructions. Also, provide a simple consolidated shopping list of all the items I need to buy, grouped by category (e.g., Produce, Dairy, Meat, Pantry Staples). ${measurementInstruction}`;
+    const dislikesInstruction = dislikes.trim() ? `CRITICAL: The user dislikes the following ingredients: ${dislikes}. Do NOT include these in any recipe suggestions or the shopping list.` : '';
+    const prompt = `You are a helpful culinary assistant specializing in budget-friendly meals. Based on the following ingredients: ${ingredients}, suggest 3-5 delicious, easy-to-make, and low-cost recipes for lunch or dinner. For each recipe, list the ingredients I have, the ingredients I need to buy, and the step-by-step instructions. Also, provide a simple consolidated shopping list of all the items I need to buy, grouped by category (e.g., Produce, Dairy, Meat, Pantry Staples). ${measurementInstruction} ${dislikesInstruction}`;
     return generateRecipes(prompt);
 };
 
-export const generateRecipesFromImage = async (image: File, measurementSystem: 'imperial' | 'metric'): Promise<ApiResponse> => {
+export const generateRecipesFromImage = async (image: File, measurementSystem: 'imperial' | 'metric', dislikes: string): Promise<ApiResponse> => {
     const measurementInstruction = `All ingredient quantities in recipes and the shopping list must be in the ${measurementSystem} system.`;
-    const prompt = `You are a helpful culinary assistant specializing in budget-friendly meals. Analyze the attached image of the inside of a fridge and/or cupboard. Identify the available ingredients. Based on what you see, suggest 3-5 delicious, easy-to-make, and low-cost recipes for lunch or dinner. For each recipe, list the ingredients I have, the ingredients I need to buy, and the step-by-step instructions. Also, provide a simple consolidated shopping list of all the items I need to buy, grouped by category (e.g., Produce, Dairy, Meat, Pantry Staples). If the image is unclear, make your best guess or state that you cannot identify the ingredients clearly. ${measurementInstruction}`;
+    const dislikesInstruction = dislikes.trim() ? `CRITICAL: The user dislikes the following ingredients: ${dislikes}. Do NOT include these in any recipe suggestions or the shopping list.` : '';
+    const prompt = `You are a helpful culinary assistant specializing in budget-friendly meals. Analyze the attached image of the inside of a fridge and/or cupboard. Identify the available ingredients. Based on what you see, suggest 3-5 delicious, easy-to-make, and low-cost recipes for lunch or dinner. For each recipe, list the ingredients I have, the ingredients I need to buy, and the step-by-step instructions. Also, provide a simple consolidated shopping list of all the items I need to buy, grouped by category (e.g., Produce, Dairy, Meat, Pantry Staples). If the image is unclear, make your best guess or state that you cannot identify the ingredients clearly. ${measurementInstruction} ${dislikesInstruction}`;
     const imagePart = await fileToGenerativePart(image);
     return generateRecipes(prompt, imagePart);
 };
 
 
-export const generateWeeklyPlan = async (ingredients: string, images: File[], favorites: Recipe[], household: Household, craving: string, measurementSystem: 'imperial' | 'metric'): Promise<WeekPlanResponse> => {
+export const generateWeeklyPlan = async (ingredients: string, images: File[], favorites: Recipe[], household: Household, craving: string, measurementSystem: 'imperial' | 'metric', dislikes: string): Promise<WeekPlanResponse> => {
     const favoriteNames = favorites.map(f => f.name).join(', ');
     const householdDescription = `The household consists of ${household.adults} adult(s), ${household.teens} teen(s), and ${household.toddlers} toddler(s). Teens generally eat adult-sized portions, while toddlers eat much smaller portions.`;
     const measurementInstruction = `All ingredient quantities in recipes and the shopping list must be in the ${measurementSystem} system.`;
+    const dislikesInstruction = dislikes.trim() ? `7. **Critical Exclusion:** The user dislikes the following ingredients: **${dislikes}**. You absolutely MUST NOT include these ingredients in any part of the plan (neither recipes nor shopping list).` : '';
+
 
     const prompt = `You are an expert meal planner helping users create a budget-friendly 7-day dinner plan.
     
@@ -160,6 +164,7 @@ export const generateWeeklyPlan = async (ingredients: string, images: File[], fa
     4.  **Available Ingredients (from images):** Analyze the attached images of the user's fridge and pantry to identify more ingredients.
     5.  **User's Favorite Recipes:** ${favoriteNames || 'None listed.'} Please try to incorporate one or two of these favorites into the plan if they are a good fit with the available ingredients.
     6.  **User's Craving:** "${craving || 'None specified.'}" If the user has specified a craving, please include at least one meal in the weekly plan that satisfies it (e.g., if they crave "pasta", include a pasta dish).
+    ${dislikesInstruction}
 
     Your task:
     - Create a 7-day dinner plan with a unique, delicious, and easy-to-make recipe for each day.

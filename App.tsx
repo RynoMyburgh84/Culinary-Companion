@@ -11,8 +11,8 @@ import FavoritesList from './components/FavoritesList';
 import ModeSwitcher from './components/ModeSwitcher';
 import WeekPlannerInput from './components/WeekPlannerInput';
 import WeekPlanDisplay from './components/WeekPlanDisplay';
-import SettingsToggle from './components/SettingsToggle';
 import { CogIcon } from './components/icons/CogIcon';
+import SettingsModal from './components/SettingsModal';
 
 const App: React.FC = () => {
     const [appMode, setAppMode] = useState<AppMode>('single');
@@ -24,8 +24,12 @@ const App: React.FC = () => {
     const [favorites, setFavorites] = useState<Recipe[]>([]);
     const [household, setHousehold] = useState<Household>({ adults: 2, teens: 0, toddlers: 0 });
     const [craving, setCraving] = useState<string>('');
+    
+    // Settings State
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [theme, setTheme] = useState<Theme>(() => (localStorage.getItem('culinaryCompanionTheme') as Theme) || 'system');
     const [measurementSystem, setMeasurementSystem] = useState<MeasurementSystem>(() => (localStorage.getItem('culinaryCompanionMeasurement') as MeasurementSystem) || 'imperial');
+    const [dislikes, setDislikes] = useState<string>(() => localStorage.getItem('culinaryCompanionDislikes') || '');
 
     useEffect(() => {
         const root = window.document.documentElement;
@@ -39,6 +43,10 @@ const App: React.FC = () => {
     useEffect(() => {
         localStorage.setItem('culinaryCompanionMeasurement', measurementSystem);
     }, [measurementSystem]);
+    
+    useEffect(() => {
+        localStorage.setItem('culinaryCompanionDislikes', dislikes);
+    }, [dislikes]);
 
 
     useEffect(() => {
@@ -103,14 +111,14 @@ const App: React.FC = () => {
         setError(null);
         setApiResponse(null);
         try {
-            const response = await generateRecipesFromText(ingredients, measurementSystem);
+            const response = await generateRecipesFromText(ingredients, measurementSystem, dislikes);
             setApiResponse(response);
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
         }
-    }, [measurementSystem]);
+    }, [measurementSystem, dislikes]);
 
     const handleImageSubmit = useCallback(async (imageFile: File) => {
         if (!imageFile) {
@@ -121,14 +129,14 @@ const App: React.FC = () => {
         setError(null);
         setApiResponse(null);
         try {
-            const response = await generateRecipesFromImage(imageFile, measurementSystem);
+            const response = await generateRecipesFromImage(imageFile, measurementSystem, dislikes);
             setApiResponse(response);
         } catch (err) {
             setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
         }
-    }, [measurementSystem]);
+    }, [measurementSystem, dislikes]);
 
     const handlePlannerSubmit = useCallback(async (ingredients: string, images: File[]) => {
         if (!ingredients.trim() && images.length === 0) {
@@ -139,14 +147,14 @@ const App: React.FC = () => {
         setError(null);
         setWeekPlanResponse(null);
         try {
-            const response = await generateWeeklyPlan(ingredients, images, favorites, household, craving, measurementSystem);
+            const response = await generateWeeklyPlan(ingredients, images, favorites, household, craving, measurementSystem, dislikes);
             setWeekPlanResponse(response);
         } catch (err) {
              setError(err instanceof Error ? err.message : "An unknown error occurred.");
         } finally {
             setIsLoading(false);
         }
-    }, [favorites, household, craving, measurementSystem]);
+    }, [favorites, household, craving, measurementSystem, dislikes]);
 
     const renderSingleMealFinder = () => (
         <>
@@ -203,19 +211,24 @@ const App: React.FC = () => {
             <main className="container mx-auto p-4 max-w-4xl pb-32">
                 <ModeSwitcher activeMode={appMode} onModeChange={handleModeChange} />
                 
-                <div className="max-w-lg mx-auto my-8 p-4 bg-stone-100 dark:bg-stone-800/50 rounded-xl border border-stone-200 dark:border-stone-700">
-                    <h2 className="flex items-center justify-center text-lg font-semibold text-stone-700 dark:text-stone-300 mb-3">
-                        <CogIcon className="w-6 h-6 mr-2" />
+                <div className="text-center my-8">
+                     <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="inline-flex items-center justify-center px-4 py-2 border border-stone-300 dark:border-stone-600 font-semibold text-stone-700 dark:text-stone-300 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+                     >
+                        <CogIcon className="w-5 h-5 mr-2" />
                         Settings
-                    </h2>
-                    <SettingsToggle
-                        label="Measurement System"
-                        option1="Imperial"
-                        option2="Metric"
-                        value={measurementSystem}
-                        onChange={(value) => setMeasurementSystem(value as MeasurementSystem)}
-                    />
+                    </button>
                 </div>
+
+                <SettingsModal 
+                    isOpen={isSettingsOpen}
+                    onClose={() => setIsSettingsOpen(false)}
+                    measurementSystem={measurementSystem}
+                    onMeasurementChange={(value) => setMeasurementSystem(value as MeasurementSystem)}
+                    dislikes={dislikes}
+                    onDislikesChange={setDislikes}
+                />
 
                 {appMode === 'single' ? renderSingleMealFinder() : renderWeekPlanner()}
 
